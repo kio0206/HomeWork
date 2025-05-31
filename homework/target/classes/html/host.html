@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>主机状态监控大屏</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1e272e;
+            color: #ecf0f1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            background: #2f3640;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+            color: #00cec9;
+        }
+
+        #container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 1400px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: #2f3640;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+        }
+
+        .hostname {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .online {
+            color: #2ecc71;
+        }
+
+        .offline {
+            color: #e74c3c;
+        }
+
+        #loading {
+            font-size: 18px;
+            margin-top: 40px;
+            color: #95a5a6;
+        }
+
+        #error {
+            color: #e74c3c;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>主机状态监控大屏</h1>
+</header>
+
+<div id="loading">加载中，请稍候...</div>
+<div id="container" style="display: none;"></div>
+<div id="error"></div>
+
+<script>
+    const container = document.getElementById('container');
+    const loading = document.getElementById('loading');
+    const errorMsg = document.getElementById('error');
+
+    async function fetchHostStatus() {
+        loading.style.display = 'block';
+        container.style.display = 'none';
+        errorMsg.textContent = '';
+
+        try {
+            const response = await fetch('http://localhost:8888/get-host-status', { timeout: 20000 });
+            const data = await response.json();
+
+            container.innerHTML = '';
+            data.forEach(host => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+
+                const nameEl = document.createElement('div');
+                nameEl.classList.add('hostname');
+                nameEl.textContent = host.name;
+
+                const statusEl = document.createElement('div');
+                statusEl.classList.add('status', host.status === 'online' ? 'online' : 'offline');
+                statusEl.textContent = host.status === 'online' ? '🟢 在线' : '🔴 离线';
+
+                card.appendChild(nameEl);
+                card.appendChild(statusEl);
+                container.appendChild(card);
+            });
+
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+        } catch (err) {
+            console.error('请求失败', err);
+            loading.style.display = 'none';
+            errorMsg.textContent = '❌ 获取主机状态失败，请检查接口或网络连接。';
+        }
+    }
+
+    // 初始加载一次
+    fetchHostStatus();
+
+    // 每30秒刷新一次
+    setInterval(fetchHostStatus, 30000);
+</script>
+</body>
+</html>
